@@ -56,12 +56,9 @@
 where-to-eat/
 ├── README.md                 # 本介绍文档
 ├── SKILL.md                  # 技能主文档（流程、步骤、规则）
-├── SKILL_OPTIMIZATION_GUIDE.md  # 优化说明与设计取舍
-├── CHANGELOG.md              # 版本更新记录
 ├── references/               # 参考材料
 │   ├── algorithm.md         # 地理与时间算法详解
 │   ├── api-guide.md         # 高德 API 使用说明
-│   └── examples.md          # 示例与话术
 └── scripts/
     └── centroid_calculator.py   # 重心计算与出行时间解析（Python）
 ```
@@ -75,7 +72,7 @@ where-to-eat/
 ## 版本与迭代
 
 - **当前版本**：v1.1.3  
-- **主要迭代**（详见 `CHANGELOG.md`）：
+- **主要迭代**（详见 `CHANGELOG.md` 如有）：
   - v1.1.0：API 解析细化、用户路线知识、时间上下文、多方案对比与数据校验。
   - v1.1.1：API 不可用时的估算兜底与标注规范。
   - v1.1.2：明确「API 优先、估算仅作兜底」的原则。
