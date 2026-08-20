@@ -27,7 +27,7 @@ Where to Eat 从参与者出发地和口味出发，搜索多个候选餐厅，�
 - **可核验的地点识别**：模糊地名依次尝试地铁站、公交站、原始地点，并展示“原始输入 → 实际使用地点”。
 - **完整路线说明**：公共交通结果包含上车站、线路、换乘站、下车站和最后步行。
 - **口味优先的候选搜索**：按日料、火锅、烤肉等偏好搜索，不把评分当作唯一排序条件。
-- **公共额度与自带 Key**：服务端 Key 受每日公共使用次数保护；用户也可以临时使用自己的高德 Key，仅用于这一次请求，不保存。
+- **用户自带 Key**：每次查询使用用户在页面填写的高德 Key，仅用于这一次请求，不保存。
 - **两个使用入口**：对话式 Skill 使用高德 MCP；Web 服务部署在 Cloudflare Workers 上。
 
 ## 🚀 部署到 Cloudflare
@@ -38,10 +38,7 @@ Where to Eat 从参与者出发地和口味出发，搜索多个候选餐厅，�
 git clone https://github.com/shaozhengmao/where-to-eat.git
 cd where-to-eat
 
-# 将服务端高德 Key 写入 Cloudflare Secret，不会提交到 Git
-wrangler secret put AMAP_WEB_KEY
-
-# 首次部署会创建 Worker、静态资源绑定和 Durable Object
+# 首次部署会创建 Worker 和静态资源绑定
 wrangler deploy
 ```
 
@@ -55,10 +52,9 @@ wrangler deploy
        -> web/ 静态页面
        -> /api/recommend
             -> 高德 Web 服务 REST API
-            -> Durable Object（每日公共使用次数）
 ```
 
-浏览器不会直接请求高德，服务端 `AMAP_WEB_KEY` 不会返回给浏览器。页面中“使用自己的高德 Key”就是“用户自带 Key”：该 Key 只随当前 HTTPS 请求发送给 Worker，不写入 URL、不存入浏览器、不计入公共使用次数。
+浏览器不会直接请求高德。页面中填写的 Key 只随当前 HTTPS 请求发送给 Worker，不写入 URL、不存入浏览器，也不会被 Worker 替换为其他默认 Key。
 
 完整部署与本地运行说明见 [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md)。
 
@@ -106,8 +102,8 @@ wrangler deploy
 ```text
 where-to-eat/
 ├── web/                    # 无构建前端页面
-├── worker.js               # Cloudflare Worker：API 代理、候选排序、公共额度
-├── wrangler.jsonc          # Worker、静态资源、Durable Object 配置
+├── worker.js               # Cloudflare Worker：API 代理与候选排序
+├── wrangler.jsonc          # Worker 与静态资源配置
 ├── SKILL.md                # 对话式 MCP 工作流
 ├── WEB_DEPLOYMENT.md       # 本地运行与 Cloudflare 部署说明
 ├── references/
@@ -120,8 +116,7 @@ where-to-eat/
 ## ⚠️ 使用边界
 
 - 路线和餐厅数据来自高德，结果用于辅助聚餐决策，不保证餐厅营业、订位或实时道路状况。
-- 公共使用次数按匿名浏览器身份与中国自然日计数；成功完成的共享 Key 查询才会消耗次数。使用自己的 Key 不消耗公共次数。
-- 服务不保存用户的高德 Key。出发地只在当前请求中用于计算；部署方如需处理日志，应避免记录请求体和 Key。
+- 每次请求必须携带用户在页面填写的高德 Key；服务不提供默认 Key，也不保存用户 Key。出发地只在当前请求中用于计算；部署方如需处理日志，应避免记录请求体和 Key。
 - 高德服务的可用范围、配额与计费以高德开放平台规则为准。
 
 ## 📄 许可证

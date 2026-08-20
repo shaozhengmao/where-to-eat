@@ -26,7 +26,7 @@ Where to Eat searches food-matched restaurants, calculates complete routes for e
 - Ambiguous locations resolve as metro station, bus stop, then original place, with the result shown to users.
 - Transit instructions include boarding station, line, transfer station, alighting station, and final walk.
 - Food preference is part of candidate search; rating is not the primary ranking signal.
-- Public daily usage allowance, plus an optional user-provided Amap key for one request only.
+- A user-provided Amap key is required for every request and is used only for that request.
 - A conversational MCP Skill and a Cloudflare Workers web service.
 
 ## 🚀 Deploy to Cloudflare
@@ -36,13 +36,12 @@ Create an Amap Web Service key with geocoding, route planning, and POI search en
 ```bash
 git clone https://github.com/shaozhengmao/where-to-eat.git
 cd where-to-eat
-wrangler secret put AMAP_WEB_KEY
 wrangler deploy
 ```
 
-The Worker serves the static site and `/api/recommend` from one origin. It keeps `AMAP_WEB_KEY` server-side and uses a Durable Object to atomically enforce the public daily allowance.
+The Worker serves the static site and `/api/recommend` from one origin. It does not have a default Amap key; every request must include the key entered on the page.
 
-The optional “Use your own Amap key” field means that the submitted key is used for this request only. It is not stored in the browser, URL, Worker storage, or logs, and does not consume public usage.
+The “Amap Web Service key” field is required. The submitted key is used for this request only and is not stored in the browser, URL, Worker storage, or logs.
 
 See [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md) for local development, deployment, request budgets, and operational guidance.
 

@@ -70,11 +70,11 @@
 
           <div class="field-group"><label>公平策略</label><div class="strategy-pills" id="strategy-pills" role="radiogroup" aria-label="公平策略"><button type="button" class="strategy-pill active" data-strategy="max" role="radio" aria-checked="true">最慢的人更快</button><button type="button" class="strategy-pill" data-strategy="spread" role="radio" aria-checked="false">时间差最小</button><button type="button" class="strategy-pill" data-strategy="average" role="radio" aria-checked="false">平均耗时最低</button></div><p class="strategy-note">默认优先让最远的人不用太久；可按聚餐偏好切换排序。</p></div>
 
-          <details class="advanced"><summary>高级选项 <span>使用自己的高德 Key</span></summary><div class="advanced-body"><label class="key-label" for="amap-key">使用自己的高德 Web 服务 Key <span>仅用于本次请求，不保存</span></label><input id="amap-key" type="password" placeholder="可选，不填则使用公共使用次数" autocomplete="off" /><p>Key 只会发送给你的 Worker，不会写入 URL 或保存在浏览器。</p></div></details>
+          <details class="advanced" open><summary>高德地图配置 <span>必填</span></summary><div class="advanced-body"><label class="key-label" for="amap-key">高德 Web 服务 Key <span>仅用于本次请求，不保存</span></label><input id="amap-key" type="password" placeholder="请输入你的高德 Web 服务 Key" autocomplete="off" required /><p>Key 只会发送给你的 Worker，不会写入 URL 或保存在浏览器。服务不会使用其他默认 Key。</p></div></details>
 
           <button class="primary-button" type="submit"><span>生成聚餐方案</span><span class="button-arrow">→</span></button>
           <p class="form-message hidden" id="form-message" role="alert"></p>
-          <p class="quota-note"><span>◷</span> 公共使用次数 · 今日剩余 <strong id="quota-count">3</strong> 次</p>
+          <p class="quota-note"><span>◷</span> 每次查询使用你填写的高德 Key</p>
         </form>
 
         <section class="panel results" id="results-panel">

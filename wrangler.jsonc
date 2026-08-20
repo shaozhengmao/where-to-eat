@@ -12,12 +12,4 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
-  "durable_objects": {
-    "bindings": [
-      { "name": "DAILY_QUOTA", "class_name": "DailyQuota" }
-    ]
-  },
-  "migrations": [
-    { "tag": "v1", "new_classes": ["DailyQuota"] }
-  ]
 }

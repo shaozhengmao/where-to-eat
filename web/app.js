@@ -1,7 +1,6 @@
 const state = { city: "北京", strategy: "max", participants: [{ name: "我", location: "望京" }, { name: "小林", location: "霍营" }, { name: "阿哲", location: "朱辛庄" }], modes: new Set(["transit", "driving"]) };
 
 const list = document.querySelector("#participant-list");
-const quotaKey = "where-to-eat-public-usage";
 const isLocalPreview = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
 
 function renderParticipants() {
@@ -10,9 +9,6 @@ function renderParticipants() {
 }
 
 function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[ch])); }
-function todayKey() { return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10); }
-function usage() { const day = todayKey(); const stored = JSON.parse(localStorage.getItem(quotaKey) || "{}"); return stored.day === day ? stored.count : 0; }
-function setUsage(count) { localStorage.setItem(quotaKey, JSON.stringify({ day: todayKey(), count })); document.querySelector("#quota-count").textContent = Math.max(0, 3 - count); }
 function showMessage(message) { const box = document.querySelector("#form-message"); box.textContent = message; box.classList.remove("hidden"); }
 function clearMessage() { document.querySelector("#form-message").classList.add("hidden"); }
 
@@ -27,8 +23,7 @@ document.querySelector("#recommend-form").addEventListener("submit", async event
   event.preventDefault();
   clearMessage();
   const ownKey = document.querySelector("#amap-key").value.trim();
-  const count = usage();
-  if (!ownKey && count >= 3) { alert("今天的公共使用次数已用完，请明天再来，或在高级选项中使用自己的高德 Key。"); return; }
+  if (!ownKey) { showMessage("请先填写高德 Web 服务 Key，再生成聚餐方案。"); document.querySelector("#amap-key").focus(); return; }
   const button = event.currentTarget.querySelector(".primary-button"); button.disabled = true; button.querySelector("span:first-child").textContent = "正在比较路线…";
   const payload = { city: state.city, food: document.querySelector("#food").value.trim() || "餐厅", meetingTime: document.querySelector("#meeting-time").value, participants: state.participants, modes: [...state.modes], strategy: state.strategy, amapKey: ownKey || undefined };
   let result;
@@ -49,7 +44,6 @@ document.querySelector("#recommend-form").addEventListener("submit", async event
     button.querySelector("span:first-child").textContent = "生成聚餐方案";
     return;
   }
-  if (!ownKey && !result.sample && Number.isFinite(result.remaining)) setUsage(3 - result.remaining);
   renderProductResult(result, payload);
   button.disabled = false;
   button.querySelector("span:first-child").textContent = "生成聚餐方案";
@@ -82,4 +76,4 @@ function renderProductResult(result, payload) {
 
 function strategyLabel(strategy) { return strategy === "max" ? "优先让最慢的人更快" : strategy === "average" ? "优先降低总体平均耗时" : "优先缩小所有人的时间差"; }
 
-renderParticipants(); setUsage(usage());
+renderParticipants();

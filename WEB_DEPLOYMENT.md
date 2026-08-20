@@ -12,33 +12,25 @@
 
 ```bash
 # 在项目根目录运行
-wrangler secret put AMAP_WEB_KEY
 wrangler deploy
 ```
 
-`AMAP_WEB_KEY` 是 Cloudflare Secret，不会写入 `wrangler.jsonc`、前端代码或 Git。首次部署会创建：
+高德 Key 不需要配置为 Cloudflare Secret。首次部署会创建：
 
 - `where-to-eat` Worker；
-- `web/` 对应的静态资源；
-- `DailyQuota` Durable Object，用于公共使用次数的原子计数。
+- `web/` 对应的静态资源。
 
 部署后使用 Wrangler 输出的 `*.workers.dev` URL 访问服务。绑定自定义域名可在 Cloudflare Dashboard 的 Worker 设置中完成，或在 `wrangler.jsonc` 中添加已验证域名对应的路由。
 
 ## 本地运行
 
-为本地真实 API 调用创建未提交的 `.dev.vars`：
-
-```dotenv
-AMAP_WEB_KEY=your-amap-web-service-key
-```
-
-然后运行：
+运行 Worker：
 
 ```bash
 wrangler dev --local --port 8787
 ```
 
-打开 `http://localhost:8787`。`.dev.vars` 已被 `.gitignore` 忽略。
+打开 `http://localhost:8787`，然后在页面中填写自己的高德 Key。
 
 只检查页面布局时，也可以运行：
 
@@ -48,11 +40,11 @@ python3 -m http.server 8788 -d web
 
 静态服务器没有 Worker API，因此页面会明确显示本地样例结果，而不是伪装成高德实时数据。
 
-## Key 与公共使用次数
+## Key 使用方式
 
-- 默认情况下，Worker 使用部署方配置的 `AMAP_WEB_KEY`。
-- 每个匿名浏览器在中国自然日内最多有 3 次成功查询；失败的地理编码、路线或上游请求不会消耗次数。
-- 页面允许用户“使用自己的高德 Key”。这表示该 Key 只随当前请求传给 Worker，不保存到浏览器、URL、Worker 存储或日志，也不消耗公共使用次数。
+- 每次请求必须在页面填写高德 Web 服务 Key。
+- Worker 不读取默认服务端 Key，也不保存用户 Key。
+- Key 只随当前请求传给 Worker，不写入 URL、浏览器存储、Worker 存储或日志。
 - 不要把 Key 提交到仓库、放入 `wrangler.jsonc`，或写入前端 JavaScript。
 
 ## 当前请求预算
@@ -69,4 +61,4 @@ python3 -m http.server 8788 -d web
 - 在 Cloudflare Dashboard 查看 Worker Observability，排查高德上游失败与 Worker 异常。
 - 生产环境不要记录完整请求体，特别是 `amapKey` 字段。
 - 高德返回限流时，Worker 会有限重试并向用户返回可读错误；不要在前端无限重试。
-- 扩大公开访问前，应根据高德账户额度调整候选数、路线并发和每日公共使用次数。
+- 使用者应根据自己的高德账户额度控制查询频率和候选数量。

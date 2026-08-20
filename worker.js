@@ -1,4 +1,3 @@
-const DAILY_LIMIT = 3;
 const MAX_PARTICIPANTS = 5;
 const MAX_CANDIDATES = 3;
 const RESTAURANTS_PER_SEED = 5;
@@ -11,86 +10,33 @@ const STRATEGIES = new Set(["spread", "max", "average"]);
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/recommend" && request.method === "POST") return handleRecommendation(request, env);
-    if (url.pathname === "/api/health") return json({ ok: true, service: "where-to-eat", sharedServiceReady: Boolean(env.AMAP_WEB_KEY && env.DAILY_QUOTA) });
+    if (url.pathname === "/api/recommend" && request.method === "POST") return handleRecommendation(request);
+    if (url.pathname === "/api/health") return json({ ok: true, service: "where-to-eat", requiresUserKey: true });
     if (env.ASSETS) return env.ASSETS.fetch(request);
     return new Response("Where to Eat Worker is running.", { status: 404 });
   }
 };
 
-// One Durable Object is used for each anonymous browser identity and China day, so the counter update is atomic.
-export class DailyQuota {
-  constructor(state) {
-    this.state = state;
-  }
-
-  async fetch(request) {
-    const url = new URL(request.url);
-    const requestedLimit = Number(url.searchParams.get("limit"));
-    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? requestedLimit : DAILY_LIMIT;
-    const count = Number(await this.state.storage.get("count") || 0);
-    const mode = url.searchParams.get("mode");
-    const reservationId = url.searchParams.get("reservation");
-    const reservations = new Set(await this.state.storage.get("reservations") || []);
-    if (mode === "reserve") {
-      if (count + reservations.size >= limit) return json({ allowed: false, remaining: 0 }, 429);
-      reservations.add(reservationId);
-      await this.state.storage.put("reservations", [...reservations]);
-      return json({ allowed: true, remaining: limit - count - reservations.size });
-    }
-    if (mode === "release") {
-      reservations.delete(reservationId);
-      await this.state.storage.put("reservations", [...reservations]);
-      return json({ allowed: true, remaining: limit - count });
-    }
-    if (mode === "commit") {
-      if (!reservations.delete(reservationId)) return json({ allowed: false, remaining: Math.max(0, limit - count) }, 409);
-      const next = count + 1;
-      await this.state.storage.put("count", next);
-      await this.state.storage.put("reservations", [...reservations]);
-      await this.state.storage.setAlarm(Date.now() + 48 * 60 * 60 * 1000);
-      return json({ allowed: true, remaining: limit - next });
-    }
-    if (count >= limit) return json({ allowed: false, remaining: 0 }, 429);
-    const next = count + 1;
-    await this.state.storage.put("count", next);
-    await this.state.storage.setAlarm(Date.now() + 48 * 60 * 60 * 1000);
-    return json({ allowed: true, remaining: limit - next });
-  }
-
-  async alarm() {
-    await this.state.storage.deleteAll();
-  }
-}
-
-async function handleRecommendation(request, env) {
-  const identity = getVisitorId(request);
+async function handleRecommendation(request) {
   let payload;
   try {
     if (Number(request.headers.get("content-length") || 0) > 20_000) throw new Error("payload too large");
     payload = await request.json();
     validatePayload(payload);
   } catch (error) {
-    return json({ error: "INVALID_REQUEST", message: error.message }, 400, { "set-cookie": identity.cookie });
+    return json({ error: "INVALID_REQUEST", message: error.message }, 400);
   }
 
-  const ownKey = typeof payload.amapKey === "string" && payload.amapKey.trim();
-  const amapKey = ownKey || env.AMAP_WEB_KEY;
-  if (!amapKey) return json({ error: "AMAP_KEY_MISSING", message: "请配置服务端高德 Key，或使用自己的 Key。" }, 503, { "set-cookie": identity.cookie });
+  const amapKey = typeof payload.amapKey === "string" && payload.amapKey.trim();
+  if (!amapKey) return json({ error: "AMAP_KEY_REQUIRED", message: "请在页面中填写高德 Web 服务 Key 后再生成方案。" }, 400);
 
-  let quota = { remaining: null };
-  let reservation;
   try {
-    if (!ownKey) reservation = await reserveQuota(env, identity.id, DAILY_LIMIT);
     const geocoded = await geocodeParticipants(payload, amapKey);
     const result = await buildRecommendation(payload, amapKey, geocoded);
-    // Only successful shared-key recommendations consume public credit. A user-supplied key is never counted.
-    if (reservation) quota = await commitQuota(env, reservation);
-    return json({ ...result, remaining: quota.remaining }, 200, { "set-cookie": identity.cookie });
+    return json(result);
   } catch (error) {
-    if (reservation) await releaseQuota(env, reservation).catch(() => {});
-    const status = error.code === "INVALID_LOCATION" || error.code === "ROUTE_UNAVAILABLE" ? 400 : error.code === "DAILY_LIMIT_REACHED" || error.code === "AMAP_QUOTA_EXCEEDED" ? 429 : error.code === "QUOTA_UNAVAILABLE" ? 503 : 502;
-    return json({ error: error.code || "AMAP_REQUEST_FAILED", message: error.message }, status, { "set-cookie": identity.cookie });
+    const status = error.code === "INVALID_LOCATION" || error.code === "ROUTE_UNAVAILABLE" ? 400 : error.code === "AMAP_QUOTA_EXCEEDED" ? 429 : 502;
+    return json({ error: error.code || "AMAP_REQUEST_FAILED", message: error.message }, status);
   }
 }
 
@@ -101,28 +47,6 @@ function validatePayload(payload) {
   if (!payload.participants.every(person => person && typeof person.location === "string" && person.location.trim())) throw new Error("each participant needs a location");
   if (!Array.isArray(payload.modes) || !payload.modes.length || !payload.modes.every(mode => SUPPORTED_MODES.has(mode))) throw new Error("select one or more supported transport modes");
   if (payload.strategy !== undefined && !STRATEGIES.has(payload.strategy)) throw new Error("strategy must be spread, max, or average");
-}
-
-async function reserveQuota(env, visitorId, limit) {
-  if (!env.DAILY_QUOTA) throw codedError("QUOTA_UNAVAILABLE", "公共使用额度尚未配置，暂不使用共享高德 Key。可在高级选项中使用自己的 Key。");
-  const day = chinaDayKey();
-  const stub = env.DAILY_QUOTA.get(env.DAILY_QUOTA.idFromName(`${day}:${visitorId}:${limit}`));
-  const reservationId = crypto.randomUUID();
-  const response = await stub.fetch(`https://quota/consume?mode=reserve&reservation=${reservationId}&limit=${limit}`);
-  const result = await response.json();
-  if (!result.allowed) throw codedError("DAILY_LIMIT_REACHED", "今日公共使用次数已用完。你可以明天再试，或使用自己的高德 Key。");
-  return { stub, reservationId };
-}
-
-async function commitQuota(env, reservation) {
-  const response = await reservation.stub.fetch(`https://quota/consume?mode=commit&reservation=${reservation.reservationId}`);
-  const result = await response.json();
-  if (!result.allowed) throw codedError("DAILY_LIMIT_REACHED", "今日公共使用次数已用完。你可以明天再试，或使用自己的高德 Key。");
-  return result;
-}
-
-async function releaseQuota(env, reservation) {
-  await reservation.stub.fetch(`https://quota/consume?mode=release&reservation=${reservation.reservationId}`);
 }
 
 async function geocodeParticipants(payload, key) {
@@ -174,13 +98,6 @@ async function buildRecommendation(payload, key, geocoded) {
     })),
     restaurants: finalists.map(candidate => candidate.restaurant)
   };
-}
-
-function getVisitorId(request) {
-  const existing = (request.headers.get("cookie") || "").match(/(?:^|;\s*)visitor_id=([^;]+)/)?.[1];
-  const id = existing || crypto.randomUUID();
-  const secure = new URL(request.url).protocol === "https:" ? "; Secure" : "";
-  return { id, cookie: `visitor_id=${id}; Path=/; Max-Age=31536000; SameSite=Lax${secure}` };
 }
 
 async function amapGeo(key, address, city) {
@@ -327,7 +244,6 @@ function distanceKm(origin, location) {
 
 function numericRating(value) { return Number(value) || 0; }
 function modeLabel(mode) { return mode === "transit" ? "公共交通" : mode === "driving" ? "驾车" : "自行车"; }
-function chinaDayKey() { return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10); }
 function parsePoint(location) { const [lng, lat] = String(location).split(",").map(Number); return { lng, lat }; }
 function transitLines(data) {
   const segments = data.route?.transits?.[0]?.segments || [];
