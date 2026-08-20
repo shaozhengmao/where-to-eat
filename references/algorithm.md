@@ -1,5 +1,7 @@
 # 地理计算和优化算法详解
 
+> **当前 Skill 约定（v2.1）**：本文件保留历史算法推导，执行时以 `SKILL.md` 为准。最终目标是餐厅而非抽象中心点；候选餐厅必须用每位参与者的实际路线重新评分；默认排序为 `max`（最慢的人更快），其次为 `spread`、`average`；评分不能替代路线公平性。
+
 ## 1. 地理中心点计算（重心算法）
 
 ### 原理
@@ -626,4 +628,3 @@ if APIDataValidator.validate_travel_time(driving_time):
     print("✓ 出行时间有效")
 else:
     print("✗ 出行时间异常")
-

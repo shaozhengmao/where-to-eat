@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f4ef" />
+    <title>Where to Eat | 聚餐决策台</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      .shell { padding-top: 32px; }
+      .intro { display: grid; grid-template-columns: minmax(430px, 1fr) 300px; gap: clamp(42px, 8vw, 130px); align-items: start; margin-bottom: 34px; }
+      .intro-copy { max-width: 710px; }
+      .intro h1 { font-size: clamp(38px, 5vw, 62px); line-height: 1.06; margin: 10px 0 14px; }
+      .intro-preview { width: 100%; padding: 4px 0 2px; border-top: none; }
+      .intro-preview > p { margin: -4px 0 10px; color: var(--ink); font: 500 18px/1.35 Georgia, serif; }
+      .intro-preview > p + p { margin: 0; color: var(--muted); font: 13px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+      .intro-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+      .intro-step { padding-top: 9px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; line-height: 1.45; }.intro-step b { display: block; margin-bottom: 3px; color: var(--green); font: 700 12px Georgia, serif; }
+      @media (max-width: 800px) { .shell { padding-top: 32px; }.intro { display: block; grid-template-columns: 1fr; margin-bottom: 28px; }.intro-preview { display: block; margin-top: 24px; }.intro h1 { font-size: 44px; } }
+      @media (max-width: 430px) { .intro h1 { font-size: 42px; }.intro-steps { gap: 6px; } }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="./">
+        <span class="brand-mark">W</span>
+        <span>WHERE TO EAT</span>
+      </a>
+      <a class="github-link" href="https://github.com/shaozhengmao/where-to-eat" target="_blank" rel="noreferrer" aria-label="在 GitHub 查看 Where to Eat 仓库" title="在 GitHub 查看仓库">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.23c0 4.52 2.87 8.35 6.84 9.7.5.1.68-.22.68-.49 0-.24-.01-1.04-.01-1.89-2.78.62-3.37-1.2-3.37-1.2-.46-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .08 1.53 1.06 1.53 1.06.9 1.57 2.35 1.12 2.92.86.09-.67.35-1.12.64-1.38-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.31.1-2.73 0 0 .84-.28 2.75 1.05A9.3 9.3 0 0 1 12 6.95c.85 0 1.7.12 2.5.35 1.9-1.33 2.74-1.05 2.74-1.05.55 1.42.2 2.47.1 2.73.64.72 1.03 1.63 1.03 2.75 0 3.94-2.35 4.8-4.58 5.06.36.32.68.92.68 1.86 0 1.34-.01 2.42-.01 2.75 0 .27.18.6.69.49A10.25 10.25 0 0 0 22 12.23C22 6.58 17.52 2 12 2Z" /></svg>
+      </a>
+    </header>
+
+    <main class="shell">
+      <section class="intro">
+        <div class="intro-copy">
+          <p class="eyebrow">GROUP DINING DECISION TOOL</p>
+          <h1>让见面地点<br /><em>对每个人都公平。</em></h1>
+        </div>
+        <aside class="intro-preview" aria-label="产品说明与推荐策略">
+          <p>输入大家的出发地与口味，快速比较交通上更公平的候选餐厅。</p>
+          <p>基于实际出行时间筛出 3 家候选餐厅，比较每个人到店的路线与耗时。</p>
+          <div class="intro-steps" aria-label="推荐流程">
+            <div class="intro-step"><b>01</b>定位出发地</div>
+            <div class="intro-step"><b>02</b>比较路线</div>
+            <div class="intro-step"><b>03</b>推荐餐厅</div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="workspace-grid">
+        <form class="panel controls" id="recommend-form">
+          <div class="panel-heading"><div><p class="section-kicker">01 / INPUT</p><h2>这次怎么约？</h2></div><span class="step-count">1 / 2</span></div>
+
+          <div class="field-group">
+            <label>参与者与出发地 <span>2–5 人</span></label>
+            <div id="participant-list" class="participant-list"></div>
+            <button class="add-button" id="add-participant" type="button"><span>+</span> 添加一位朋友</button>
+            <p class="location-note">当前仅支持北京、上海、广州、深圳；所有出发地需位于同一座城市。未注明类型时，依次尝试地铁站、公交站和原始地点，并在结果中展示。</p>
+          </div>
+
+          <div class="split-fields">
+          <div class="field-group"><label for="meeting-time">聚餐时间 <span>用于计算建议出发时间</span></label><input id="meeting-time" type="time" value="19:00" /></div>
+            <div class="field-group city-field"><label>当前支持城市</label><div class="city-pills" id="city-pills" role="radiogroup" aria-label="当前支持城市"><button type="button" class="city-pill active" data-city="北京" role="radio" aria-checked="true">北京</button><button type="button" class="city-pill" data-city="上海" role="radio" aria-checked="false">上海</button><button type="button" class="city-pill" data-city="广州" role="radio" aria-checked="false">广州</button><button type="button" class="city-pill" data-city="深圳" role="radio" aria-checked="false">深圳</button></div></div>
+          </div>
+
+          <div class="field-group"><label for="food">想吃什么？ <span>可选</span></label><input id="food" value="日料" placeholder="例如：烤肉、火锅、素食" /></div>
+
+          <div class="field-group"><label>出行方式 <span>步行作为公共交通接驳计入</span></label><div class="mode-pills" id="mode-pills"><button type="button" class="mode-pill active" data-mode="transit">公共交通</button><button type="button" class="mode-pill active" data-mode="driving">驾车</button><button type="button" class="mode-pill" data-mode="bicycle">自行车</button></div></div>
+
+          <div class="field-group"><label>公平策略</label><div class="strategy-pills" id="strategy-pills" role="radiogroup" aria-label="公平策略"><button type="button" class="strategy-pill active" data-strategy="max" role="radio" aria-checked="true">最慢的人更快</button><button type="button" class="strategy-pill" data-strategy="spread" role="radio" aria-checked="false">时间差最小</button><button type="button" class="strategy-pill" data-strategy="average" role="radio" aria-checked="false">平均耗时最低</button></div><p class="strategy-note">默认优先让最远的人不用太久；可按聚餐偏好切换排序。</p></div>
+
+          <details class="advanced"><summary>高级选项 <span>使用自己的高德 Key</span></summary><div class="advanced-body"><label class="key-label" for="amap-key">使用自己的高德 Web 服务 Key <span>仅用于本次请求，不保存</span></label><input id="amap-key" type="password" placeholder="可选，不填则使用公共使用次数" autocomplete="off" /><p>Key 只会发送给你的 Worker，不会写入 URL 或保存在浏览器。</p></div></details>
+
+          <button class="primary-button" type="submit"><span>生成聚餐方案</span><span class="button-arrow">→</span></button>
+          <p class="form-message hidden" id="form-message" role="alert"></p>
+          <p class="quota-note"><span>◷</span> 公共使用次数 · 今日剩余 <strong id="quota-count">3</strong> 次</p>
+        </form>
+
+        <section class="panel results" id="results-panel">
+          <div class="empty-state" id="empty-state"><div class="empty-illustration"><span class="pin pin-one"></span><span class="pin pin-two"></span><span class="pin pin-three"></span><span class="route route-one"></span><span class="route route-two"></span></div><p class="section-kicker">YOUR NEXT MOVE</p><h2>先把大家的位置<br />放进左边。</h2><p>我们会用出行时间，而不是直线距离，找到更公平的碰面方式。</p></div>
+          <div id="result-content" class="result-content hidden"></div>
+        </section>
+      </section>
+    </main>
+    <footer class="footer"><span>WHERE TO EAT / v2.1</span><span>数据由高德地图提供 · 结果仅供聚餐决策参考</span></footer>
+    <script src="./app.js"></script>
+  </body>
+</html>

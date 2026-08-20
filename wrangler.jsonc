@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "where-to-eat",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-08",
+  "assets": {
+    "directory": "./web",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "DAILY_QUOTA", "class_name": "DailyQuota" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_classes": ["DailyQuota"] }
+  ]
+}

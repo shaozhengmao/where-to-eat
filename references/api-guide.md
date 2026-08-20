@@ -1,5 +1,7 @@
 # 高德地图 MCP API 完整指南
 
+> **执行优先级**：具体推荐流程以 `SKILL.md` 为准。本参考只描述 MCP 参数和响应结构；不要按历史示例把餐厅按评分单独排序，也不要对 API 已返回的总耗时再次加固定换乘时间。
+
 本文档详细说明如何使用高德地图API完成聚餐地点推荐。
 
 ## 1. 地理编码 (Geocoding)
@@ -207,14 +209,14 @@ for segment in transit["segments"]:
         transit_time += int(segment["bus"]["duration"]) / 60
         transfer_count += 1
 
-# 换乘时间估算（每次换乘3-5分钟）
-transfer_time = transfer_count * 4  # 平均4分钟
+# 高德的 duration 已代表该方案总耗时；不要再次人为加固定换乘时间。
+transfer_time = 0
 
 # 输出结果
 print(f"总出行时间: {total_duration:.0f}分钟")
 print(f"  纯地铁/公交运行时间: {transit_time:.0f}分钟")
 print(f"  步行时间: {walking_time:.0f}分钟")
-print(f"  换乘时间: {transfer_time:.0f}分钟（{transfer_count}次换乘）")
+print(f"  API返回总耗时: {total_duration:.0f}分钟（包含 API 返回的步行/换乘部分）")
 ```
 
 **输出格式示例**：
@@ -660,4 +662,3 @@ def find_best_restaurant(participants, food_pref, city="北京"):
         "travel_times": travel_times,
         "restaurants": restaurants
     }
-

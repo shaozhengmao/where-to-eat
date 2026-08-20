@@ -1,126 +1,77 @@
 <h1 align="center">Where to Eat</h1>
 
-<p align="center">Group dining location & restaurant recommender — finds the fairest meeting point based on everyone's location and recommends nearby restaurants.</p>
+<p align="center">
+  <strong>Find a restaurant that is fairer for the whole group, using real travel times.</strong><br />
+  <em>多人聚餐，按真实到店路线找到更公平的餐厅。</em>
+</p>
 
-<p align="center">Last updated: 2026-05 | <a href="./README.md">中文</a></p>
-
-## Table of Contents
-
-- [⚙️ Prerequisites](#prerequisites)
-- [💡 Overview](#overview)
-- [🕐 When to Use](#when-to-use)
-- [🚀 Core Capabilities](#core-capabilities)
-- [🎯 Design Principles](#design-principles)
-- [📁 Repository Structure](#repository-structure)
-- [🔖 Changelog](#changelog)
-- [⚡ Quick Example](#quick-example)
-- [📖 Related Docs](#related-docs)
-- [📄 License](#license)
+<p align="center">
+  <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" />
+  <img alt="Amap" src="https://img.shields.io/badge/Map-Amap-00A6A6" />
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
+</p>
 
 ---
 
-## Prerequisites
+Most “find a middle point” tools stop at an abstract coordinate. Group dining ends at a restaurant: everyone needs a workable route, the slowest trip matters, and the suggestion must be explainable.
 
-- **Amap (高德) API Key**: The skill uses Amap Web Service APIs for geocoding, route planning, and POI search. [Register on Amap Open Platform](https://lbs.amap.com/), create an app, and enable: Web Service, Geocoding/Reverse Geocoding, Route Planning, POI Search.
-- **MCP Environment**: Configure the **Amap MCP service** (e.g. `amap-maps`) in Cursor / Claude or similar environments so the skill can call `mcp_amap-maps_*` tools. Store the API key in your MCP or environment config — **never commit it to this repo**.
+Where to Eat searches food-matched restaurants, calculates complete routes for every participant, and returns one primary recommendation with up to two alternatives. Its default strategy minimizes the slowest participant's travel time; smallest time spread and lowest average time are also available.
 
----
+> Currently supports Beijing, Shanghai, Guangzhou, and Shenzhen, for groups of 2–5 participants.
 
-## Overview
+## ✨ Features
 
-When a group wants to eat out together, this skill takes each person's starting location (e.g. metro station, neighborhood), calculates the **most time-fair** meeting point, and recommends **TOP 5 nearby restaurants** based on food preferences. Supports comparison across driving, subway, and bus, with optional Markdown export for easy sharing.
+- Restaurant-first recommendation based on complete participant routes.
+- Three fairness strategies: smallest maximum travel time, smallest spread, or lowest average.
+- Ambiguous locations resolve as metro station, bus stop, then original place, with the result shown to users.
+- Transit instructions include boarding station, line, transfer station, alighting station, and final walk.
+- Food preference is part of candidate search; rating is not the primary ranking signal.
+- Public daily usage allowance, plus an optional user-provided Amap key for one request only.
+- A conversational MCP Skill and a Cloudflare Workers web service.
 
----
+## 🚀 Deploy to Cloudflare
 
-## When to Use
+Create an Amap Web Service key with geocoding, route planning, and POI search enabled, then run:
 
-Trigger this skill when users say things like:
-
-- "Let's grab food together", "find a middle point", "where should we meet to eat", "group dinner location"
-- Or discuss: "multi-person dining", "most convenient spot", "restaurant recommendation"
-
----
-
-## Core Capabilities
-
-| Capability | Description |
-|------------|-------------|
-| **Geographic Center** | Calculates the centroid of all starting locations as the ideal meeting point baseline |
-| **Multi-mode Travel Time** | Uses Amap API to fetch real-time driving/subway/bus times; distinguishes pure transit time from total travel time (including walking and transfers) |
-| **Time Fairness** | Measures variance across participants' travel times — lower variance means fairer for everyone |
-| **Multi-plan Comparison** | Presents driving, subway, and bus options side by side with pros/cons for the user to choose |
-| **Restaurant Recommendation** | Ranks by rating and distance, recommends TOP 5, capped at ≤25 API detail calls |
-| **Markdown Export** | Optionally generates and saves `dining-plan_[date]_[time].md` for sharing with the group |
-
----
-
-## Design Principles
-
-- **API First**: Travel times are based on Amap API results; estimates are only used when the API is unavailable and are clearly labeled as "estimated".
-- **Leverage User Knowledge**: Proactively ask if users know a better route; if provided and verifiable, prioritize it.
-- **Time Context**: Always clarify the dining time (e.g. "7pm"), distinguish between "leave now" and "arrive by a specific time", and account for peak hours and buffer time.
-- **Respect Preferences**: If the user explicitly excludes a transport mode (e.g. "no e-bikes"), remove it entirely — it should not appear in any recommendation.
-
----
-
-## Repository Structure
-
+```bash
+git clone https://github.com/shaozhengmao/where-to-eat.git
+cd where-to-eat
+wrangler secret put AMAP_WEB_KEY
+wrangler deploy
 ```
+
+The Worker serves the static site and `/api/recommend` from one origin. It keeps `AMAP_WEB_KEY` server-side and uses a Durable Object to atomically enforce the public daily allowance.
+
+The optional “Use your own Amap key” field means that the submitted key is used for this request only. It is not stored in the browser, URL, Worker storage, or logs, and does not consume public usage.
+
+See [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md) for local development, deployment, request budgets, and operational guidance.
+
+## 🧭 How It Works
+
+```text
+Participants + food preference
+  -> resolve locations
+  -> search candidate restaurants around transport-balanced areas
+  -> calculate complete routes for every participant
+  -> rank by the selected fairness strategy
+  -> one primary restaurant + up to two alternatives
+```
+
+When an arrival time is supplied, the app suggests departure times using route duration plus a five-minute buffer. API route times are query-time values and do not promise future traffic conditions.
+
+## 📁 Structure
+
+```text
 where-to-eat/
-├── README.md                    # This document (Chinese)
-├── README_EN.md                 # This document (English)
-├── SKILL.md                     # Main skill doc (workflow, steps, rules)
-├── SKILL_OPTIMIZATION_GUIDE.md  # Optimization notes and design trade-offs
-├── CHANGELOG.md                 # Version history
-├── references/
-│   ├── algorithm.md             # Geographic and travel time algorithm details
-│   ├── api-guide.md             # Amap API usage guide
-│   └── examples.md              # Examples and sample dialogues
+├── web/                    # Static frontend
+├── worker.js               # Cloudflare Worker, Amap API proxy, ranking, allowance
+├── wrangler.jsonc          # Worker, static assets, Durable Object config
+├── SKILL.md                # Conversational MCP workflow
+├── WEB_DEPLOYMENT.md       # Local development and Cloudflare deployment
+├── references/             # Algorithm and Amap MCP references
 └── scripts/
-    └── centroid_calculator.py   # Centroid calculation and travel time parsing (Python)
 ```
 
-- **SKILL.md**: Full execution steps, parameter collection, data validation, and Markdown output — the primary reference when running the skill.
-- **references/**: Algorithm details, API usage, and examples for implementation and debugging.
-- **scripts/**: Reusable logic for centroid coordinates, API response parsing (e.g. splitting subway/bus segment times).
+## 📄 License
 
----
-
-## Changelog
-
-- **Current version**: v1.1.3
-- **Key iterations** (see `CHANGELOG.md` for details):
-  - v1.1.0: Refined API parsing, user route knowledge, time context, multi-plan comparison, and data validation.
-  - v1.1.1: Fallback estimation when API is unavailable, with clear labeling.
-  - v1.1.2: Formalized "API first, estimation only as fallback" principle.
-  - v1.1.3: Added Step 10 — generate and save Markdown dining plan document.
-
----
-
-## Quick Example
-
-**User input**:
-"Three of us are at Laiguangying, Huoying, and Zhuxinzhuang. We want BBQ — find us a meeting spot and restaurants."
-
-**The skill will**:
-1. Geocode all three locations to get coordinates.
-2. Calculate the centroid; optionally ask the user if they know a better route.
-3. Call Amap API to get driving/subway/bus travel times to the centroid, parsing walking, transfer, and pure transit segments.
-4. Validate time reasonableness and compare similarity across transport plans.
-5. Recommend a meeting area with pros/cons for each transport option.
-6. Calculate departure times based on the dining time (including peak hours and buffer).
-7. Search nearby restaurants for "BBQ" and recommend TOP 5.
-8. Optionally generate and save `dining-plan_[date]_[time].md`.
-
----
-
-## Related Docs
-
-- Execution details and steps: **SKILL.md**
-- Algorithms and API: **references/algorithm.md**, **references/api-guide.md**
-
----
-
-## License
-
-[MIT License](LICENSE)
+[MIT](LICENSE) © 2026 shaozhengmao

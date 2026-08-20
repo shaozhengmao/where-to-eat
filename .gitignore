@@ -18,3 +18,6 @@ env/
 .env
 .env.local
 *.key
+.dev.vars
+.dev.vars.*
+.wrangler/
