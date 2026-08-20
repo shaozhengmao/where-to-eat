@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" />
+  <img alt="Cloudflare Pages" src="https://img.shields.io/badge/Cloudflare-Pages-F38020?logo=cloudflare&logoColor=white" />
   <img alt="Amap" src="https://img.shields.io/badge/Map-Amap-00A6A6" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
 </p>
@@ -27,21 +27,22 @@ Where to Eat searches food-matched restaurants, calculates complete routes for e
 - Transit instructions include boarding station, line, transfer station, alighting station, and final walk.
 - Food preference is part of candidate search; rating is not the primary ranking signal.
 - A user-provided Amap key is required for every request and is used only for that request.
-- A conversational MCP Skill and a Cloudflare Workers web service.
+- A conversational MCP Skill and a Cloudflare Pages web service with Pages Functions.
 
-## 🚀 Deploy to Cloudflare
+## 🚀 Deploy to Cloudflare Pages
 
 Create an Amap Web Service key with geocoding, route planning, and POI search enabled, then run:
 
 ```bash
 git clone https://github.com/shaozhengmao/where-to-eat.git
 cd where-to-eat
-wrangler deploy
+wrangler pages project create where-to-eat --production-branch main
+wrangler pages deploy web --project-name where-to-eat
 ```
 
-The Worker serves the static site and `/api/recommend` from one origin. It does not have a default Amap key; every request must include the key entered on the page.
+Cloudflare Pages serves the static site and Pages Functions serve `/api/recommend` from one origin. There is no default Amap key; every request must include the key entered on the page.
 
-The “Amap Web Service key” field is required. The submitted key is used for this request only and is not stored in the browser, URL, Worker storage, or logs.
+The “Amap Web Service key” field is required. The submitted key is used for this request only and is not stored in the browser, URL, Pages storage, or logs.
 
 See [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md) for local development, deployment, request budgets, and operational guidance.
 
@@ -63,8 +64,9 @@ When an arrival time is supplied, the app suggests departure times using route d
 ```text
 where-to-eat/
 ├── web/                    # Static frontend
-├── worker.js               # Cloudflare Worker, Amap API proxy, ranking, allowance
-├── wrangler.jsonc          # Worker, static assets, Durable Object config
+├── functions/lib/          # Shared API logic
+├── functions/api/          # Pages Functions routes
+├── wrangler.jsonc          # Pages Functions configuration
 ├── SKILL.md                # Conversational MCP workflow
 ├── WEB_DEPLOYMENT.md       # Local development and Cloudflare deployment
 ├── references/             # Algorithm and Amap MCP references

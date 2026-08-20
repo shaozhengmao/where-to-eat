@@ -7,17 +7,7 @@ const SUPPORTED_MODES = new Set(["driving", "transit", "bicycle"]);
 const CITY_ADCODE_PREFIX = { "北京": "11", "上海": "31", "广州": "4401", "深圳": "4403" };
 const STRATEGIES = new Set(["spread", "max", "average"]);
 
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === "/api/recommend" && request.method === "POST") return handleRecommendation(request);
-    if (url.pathname === "/api/health") return json({ ok: true, service: "where-to-eat", requiresUserKey: true });
-    if (env.ASSETS) return env.ASSETS.fetch(request);
-    return new Response("Where to Eat Worker is running.", { status: 404 });
-  }
-};
-
-async function handleRecommendation(request) {
+export async function handleRecommendation(request) {
   let payload;
   try {
     if (Number(request.headers.get("content-length") || 0) > 20_000) throw new Error("payload too large");

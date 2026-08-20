@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img alt="Cloudflare Workers" src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" />
+  <img alt="Cloudflare Pages" src="https://img.shields.io/badge/Cloudflare-Pages-F38020?logo=cloudflare&logoColor=white" />
   <img alt="Amap" src="https://img.shields.io/badge/Map-Amap-00A6A6" />
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green" />
   <img alt="Version" src="https://img.shields.io/badge/version-2.1.0-245B4A" />
@@ -28,9 +28,9 @@ Where to Eat 从参与者出发地和口味出发，搜索多个候选餐厅，�
 - **完整路线说明**：公共交通结果包含上车站、线路、换乘站、下车站和最后步行。
 - **口味优先的候选搜索**：按日料、火锅、烤肉等偏好搜索，不把评分当作唯一排序条件。
 - **用户自带 Key**：每次查询使用用户在页面填写的高德 Key，仅用于这一次请求，不保存。
-- **两个使用入口**：对话式 Skill 使用高德 MCP；Web 服务部署在 Cloudflare Workers 上。
+- **两个使用入口**：对话式 Skill 使用高德 MCP；Web 服务部署在 Cloudflare Pages + Pages Functions 上。
 
-## 🚀 部署到 Cloudflare
+## 🚀 部署到 Cloudflare Pages
 
 前提：已安装并登录 Wrangler，且已在 [高德开放平台](https://lbs.amap.com/) 创建 **Web 服务 Key**，开通地理编码、路径规划和 POI 搜索能力。
 
@@ -38,23 +38,26 @@ Where to Eat 从参与者出发地和口味出发，搜索多个候选餐厅，�
 git clone https://github.com/shaozhengmao/where-to-eat.git
 cd where-to-eat
 
-# 首次部署会创建 Worker 和静态资源绑定
-wrangler deploy
+# 首次部署会创建 Pages 项目
+wrangler pages project create where-to-eat --production-branch main
+
+# 发布静态页面与 Pages Functions
+wrangler pages deploy web --project-name where-to-eat
 ```
 
-部署成功后，Cloudflare 会输出 `*.workers.dev` 地址。需要绑定自己的域名时，在 Cloudflare Dashboard 的 Worker 设置中添加 Custom Domain，或在 `wrangler.jsonc` 中配置路由后再次部署。
+当前部署地址为 [where-to-eat-8wr.pages.dev](https://where-to-eat-8wr.pages.dev)。需要绑定自己的域名时，在 Cloudflare Dashboard 的 Pages 项目中添加 Custom Domain。
 
 运行架构：
 
 ```text
 浏览器
-  -> Cloudflare Worker
+  -> Cloudflare Pages
        -> web/ 静态页面
-       -> /api/recommend
+       -> Pages Functions /api/recommend
             -> 高德 Web 服务 REST API
 ```
 
-浏览器不会直接请求高德。页面中填写的 Key 只随当前 HTTPS 请求发送给 Worker，不写入 URL、不存入浏览器，也不会被 Worker 替换为其他默认 Key。
+浏览器不会直接请求高德。页面中填写的 Key 只随当前 HTTPS 请求发送给 Pages Function，不写入 URL、不存入浏览器，也不会被替换为其他默认 Key。
 
 完整部署与本地运行说明见 [WEB_DEPLOYMENT.md](WEB_DEPLOYMENT.md)。
 
@@ -102,8 +105,9 @@ wrangler deploy
 ```text
 where-to-eat/
 ├── web/                    # 无构建前端页面
-├── worker.js               # Cloudflare Worker：API 代理与候选排序
-├── wrangler.jsonc          # Worker 与静态资源配置
+├── functions/lib/          # API 核心逻辑
+├── functions/api/          # Pages Functions 路由
+├── wrangler.jsonc          # Pages Functions 配置
 ├── SKILL.md                # 对话式 MCP 工作流
 ├── WEB_DEPLOYMENT.md       # 本地运行与 Cloudflare 部署说明
 ├── references/
